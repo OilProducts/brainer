@@ -21,7 +21,7 @@ class SimpleLinear(nn.Module):
                                          plasticity_punish=plasticity_punish,
                                          device=device,
                                          batch_size=batch_size)
-        self.layer_3 = layers.STDPLinear(200, 10,
+        self.layer_3 = layers.STDPLinear(200, 100,
                                          a_pos=self.a_pos,
                                          a_neg=self.a_neg,
                                          plasticity_reward=plasticity_reward,

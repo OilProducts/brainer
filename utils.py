@@ -63,3 +63,39 @@ def get_mnist_dataloaders(shrink_factor=1, batch_size=64, shuffle=True, num_work
                                        drop_last=True)
 
     return mnist_train_dataloader, mnist_test_dataloader
+
+
+def supervisory_threshold_modulation(num_categories,
+                                     labels,
+                                     neurons_per_label=10,
+                                     threshold_default=1,
+                                     threshold_modulated=0.7):
+    """
+    Modifies the thresholds of the output neurons based on the labels.
+    Args:
+        num_categories:
+        labels:
+        neurons_per_label:
+        threshold_default:
+        threshold_modulated:
+
+    Returns:
+        modulated_thresholds
+
+    """
+
+    # Create empty tensor to store the modulated thresholds
+    modulated_thresholds = torch.ones(
+        (labels.shape[0], num_categories * neurons_per_label),
+        device=labels.device) * threshold_default
+
+    # Iterate over each label
+    for idx, label in enumerate(labels):
+        # Compute the start and end indices for the label
+        start_idx = label * neurons_per_label
+        end_idx = start_idx + neurons_per_label
+
+        # Set the threshold for the label to be lower
+        modulated_thresholds[idx, start_idx:end_idx] = threshold_default * threshold_modulated
+
+    return modulated_thresholds
