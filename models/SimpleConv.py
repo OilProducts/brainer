@@ -8,6 +8,8 @@ class SimpleConv(nn.Module):
         self.a_neg = a_neg
 
         self.conv_1 = layers.STDPConv2d(1, 32, 3,
+                                        input_height=28, input_width=28,
+                                        padding=1,
                                         a_pos=self.a_pos,
                                         a_neg=self.a_neg,
                                         plasticity_reward=plasticity_reward,
@@ -15,6 +17,9 @@ class SimpleConv(nn.Module):
                                         device=device,
                                         batch_size=batch_size)
         self.conv_2 = layers.STDPConv2d(32, 64, 3,
+                                        input_height=26, input_width=26,
+                                        padding=1,
+
                                         a_pos=self.a_pos,
                                         a_neg=self.a_neg,
                                         plasticity_reward=plasticity_reward,
@@ -22,6 +27,9 @@ class SimpleConv(nn.Module):
                                         device=device,
                                         batch_size=batch_size)
         self.conv_3 = layers.STDPConv2d(64, 64, 3,
+                                        input_height=24, input_width=24,
+                                        padding=1,
+
                                         a_pos=self.a_pos,
                                         a_neg=self.a_neg,
                                         plasticity_reward=plasticity_reward,
@@ -29,7 +37,7 @@ class SimpleConv(nn.Module):
                                         device=device,
                                         batch_size=batch_size)
 
-        self.fc_1 = layers.STDPLinear(64 * 4 * 4, 512,
+        self.fc_1 = layers.STDPLinear(64 * 24 * 24, 512,
                                         a_pos=self.a_pos,
                                         a_neg=self.a_neg,
                                         plasticity_reward=plasticity_reward,
