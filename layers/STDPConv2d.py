@@ -4,6 +4,7 @@ import torch.nn.functional as F
 
 class STDPConv2d(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size,
+                 input_height, input_width,
                  stride=1, padding=0, dilation=1,
                  batch_size=128, threshold_reset=1, threshold_decay=.95,
                  membrane_reset=.1, membrane_decay=.99, a_pos=0.005,
@@ -18,8 +19,10 @@ class STDPConv2d(nn.Module):
 
         # Shapes
         self.output_shape = (batch_size, out_channels,
-                             (1 + (32 + 2 * padding - kernel_size - (kernel_size - 1) * (dilation - 1)) // stride),
-                             (1 + (32 + 2 * padding - kernel_size - (kernel_size - 1) * (dilation - 1)) // stride))
+                             (1 + (input_height + 2 * padding - kernel_size - (kernel_size - 1) * (
+                                         dilation - 1)) // stride),
+                             (1 + (input_width + 2 * padding - kernel_size - (kernel_size - 1) * (
+                                         dilation - 1)) // stride))
 
         self.membrane = torch.ones(self.output_shape, device=device) * membrane_reset
         self.thresholds = torch.ones(self.output_shape, device=device) * threshold_reset
@@ -45,7 +48,7 @@ class STDPConv2d(nn.Module):
         self.a_neg = a_neg
 
         # Initialize traces
-        self.trace_pre = torch.ones((batch_size, in_channels, 32, 32), device=device)
+        self.trace_pre = torch.ones((batch_size, in_channels, input_height, input_width), device=device)
         self.trace_post = torch.ones(self.output_shape, device=device)
         self.trace_decay = trace_decay
 
@@ -77,11 +80,35 @@ class STDPConv2d(nn.Module):
         return self.out_spikes
 
     def compute_stdp_with_trace(self, trace_pre, trace_post):
-        # Note: Here, we're simply using the convolution operation for STDP.
-        # This is a naive implementation and may need more sophistication in a real-world scenario.
-        potentiation = F.conv2d(trace_post, self.a_pos * trace_pre, padding=1)
-        depression = F.conv2d(trace_pre, self.a_neg * trace_post, padding=1)
+        # Create empty tensors to store potentiation and depression values
+        potentiation = torch.zeros_like(self.weights)
+        depression = torch.zeros_like(self.weights)
+
+        # Iterate over each channel
+        # Iterate over each channel
+        for i in range(self.weights.size(0)):
+            avg_trace_pre = torch.mean(trace_pre[:, i:i + 1], dim=0).unsqueeze(0)
+            avg_trace_post = torch.mean(trace_post[:, i:i + 1], dim=0).unsqueeze(0)
+
+            trace_post_slice = trace_post[:, i:i + 1]
+            print(trace_post_slice.shape)
+            print((self.a_pos * avg_trace_pre).shape)
+
+            # Compute potentiation for the current channel
+            potentiation[i] = F.conv2d(trace_post_slice, self.a_pos * avg_trace_pre, padding=1)
+
+            # Compute depression for the current channel
+            depression[i] = F.conv2d(trace_post_slice, self.a_neg * avg_trace_post, padding=1)
+
+        # Compute the net STDP-induced weight change
         return potentiation - depression
+
+    # def compute_stdp_with_trace(self, trace_pre, trace_post):
+    #     # Note: Here, we're simply using the convolution operation for STDP.
+    #     # This is a naive implementation and may need more sophistication in a real-world scenario.
+    #     potentiation = F.conv2d(trace_post, self.a_pos * trace_pre, padding=1)
+    #     depression = F.conv2d(trace_pre, self.a_neg * trace_post, padding=1)
+    #     return potentiation - depression
 
     def reset_hidden_state(self):
         self.membrane = torch.ones(self.output_shape, device=self.device) * self.membrane_reset
