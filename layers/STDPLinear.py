@@ -28,7 +28,7 @@ class STDPLinear(nn.Module):
                  membrane_reset=.1,
                  membrane_decay=.99,
                  a_pos=0.005, a_neg=0.005,
-                 trace_decay=.95,
+                 trace_decay=.6,
                  plasticity_reward=1,
                  plasticity_punish=1,
                  device='cpu'):
@@ -75,7 +75,7 @@ class STDPLinear(nn.Module):
 
         # Simulate the LIF neurons
         self.out_spikes, self.membrane, self.thresholds = (
-            neurons.LIF_with_threshold_decay_and_ALIC(in_spikes,
+            neurons.LIF_with_threshold_decay(in_spikes,
                                              self.weights,
                                              self.membrane,
                                              self.membrane_decay,
@@ -84,8 +84,6 @@ class STDPLinear(nn.Module):
                                              self.threshold_decay,
                                              self.membrane_reset))
 
-        # print(f'num in_spikes: {in_spikes.sum()}')
-        # print(f'num out_spikes: {self.out_spikes.sum()}')
 
         if train:
             # Update traces
@@ -97,11 +95,8 @@ class STDPLinear(nn.Module):
 
             # Compute STDP weight changes using traces
             weight_changes = self.compute_stdp_with_trace(self.trace_pre, self.trace_post)
-            # print(f'in_spikes: {in_spikes.sum()}')
-            #print(f'Weight changes: {weight_changes.abs().sum()/(self.in_features*self.out_features)}')
             # Save the last weight change for potential reward/punishment adjustments
             self.last_weight_change = weight_changes  # .clone()
-
             # Apply the STDP-induced weight changes
             avg_weight_changes = weight_changes.sum(dim=0)  # .t()
             self.weights += avg_weight_changes

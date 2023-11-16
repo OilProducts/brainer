@@ -101,7 +101,7 @@ def LIF_with_threshold_decay_and_ALIC(input_spikes: torch.Tensor,
 
     # Compute ALIC based inhibition
     max_input_current = torch.mm(input_spikes, weights).max()
-    i_thresh = max_input_current / 2
+    i_thresh = max_input_current * .9
     inhibitory_effect = thresholds * (max_input_current - membrane)
     inhibitory_mask = (membrane > i_thresh).float()
     membrane = membrane - inhibitory_effect * inhibitory_mask

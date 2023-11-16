@@ -1,6 +1,7 @@
 import torch.nn as nn
 import layers
 
+
 class SimpleConv(nn.Module):
     def __init__(self, batch_size=128, a_pos=.005, a_neg=.005, plasticity_reward=1, plasticity_punish=1, device='cuda'):
         super(SimpleConv, self).__init__()
@@ -38,26 +39,21 @@ class SimpleConv(nn.Module):
                                         batch_size=batch_size)
 
         self.fc_1 = layers.STDPLinear(64 * 24 * 24, 512,
-                                        a_pos=self.a_pos,
-                                        a_neg=self.a_neg,
-                                        plasticity_reward=plasticity_reward,
-                                        plasticity_punish=plasticity_punish,
-                                        device=device,
-                                        batch_size=batch_size)
+                                      a_pos=self.a_pos,
+                                      a_neg=self.a_neg,
+                                      plasticity_reward=plasticity_reward,
+                                      plasticity_punish=plasticity_punish,
+                                      device=device,
+                                      batch_size=batch_size)
         self.fc_2 = layers.STDPLinear(512, 100,
-                                        a_pos=self.a_pos,
-                                        a_neg=self.a_neg,
-                                        plasticity_reward=plasticity_reward,
-                                        plasticity_punish=plasticity_punish,
-                                        device=device,
-                                        batch_size=batch_size)
-
-
-
-
+                                      a_pos=self.a_pos,
+                                      a_neg=self.a_neg,
+                                      plasticity_reward=plasticity_reward,
+                                      plasticity_punish=plasticity_punish,
+                                      device=device,
+                                      batch_size=batch_size)
 
     def forward(self, x, labels, train=True):
-
         layer_1_out = self.conv_1(x, train=train)
         layer_2_out = self.conv_2(layer_1_out, train=train)
         layer_3_out = self.conv_3(layer_2_out, train=train)
@@ -69,14 +65,12 @@ class SimpleConv(nn.Module):
 
         return layer_5_out
 
-
     def apply_reward(self, factor):
         self.layer_1.apply_reward(factor)
         self.layer_2.apply_reward(factor)
         self.layer_3.apply_reward(factor)
 
     def reset_hidden_state(self):
-
         self.conv_1.reset_hidden_state()
         self.conv_2.reset_hidden_state()
         self.conv_3.reset_hidden_state()
