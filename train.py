@@ -111,7 +111,7 @@ def validate(network, batch_size, num_steps, test_loader):
 def main():
     # Training param
     num_epochs = 100
-    num_steps = 100
+    num_steps = 1000
     plasticity_reward = 1
     plasticity_punish = 1
     batch_size = 64
@@ -125,19 +125,19 @@ def main():
                                     shuffle=True,
                                     num_workers=0))
 
-    network = models.SimpleConv(batch_size=batch_size,
-                                a_pos=a_pos,
-                                a_neg=a_neg,
-                                plasticity_reward=plasticity_reward,
-                                plasticity_punish=plasticity_punish,
-                                device=device)
-
-    # network = models.SimpleLinear(batch_size=batch_size,
+    # network = models.SimpleConv(batch_size=batch_size,
     #                             a_pos=a_pos,
     #                             a_neg=a_neg,
     #                             plasticity_reward=plasticity_reward,
     #                             plasticity_punish=plasticity_punish,
     #                             device=device)
+
+    network = models.SimpleLinear(batch_size=batch_size,
+                                a_pos=a_pos,
+                                a_neg=a_neg,
+                                plasticity_reward=plasticity_reward,
+                                plasticity_punish=plasticity_punish,
+                                device=device)
 
 
     network.eval()
@@ -160,9 +160,10 @@ def main():
             output_spike_accumulator = torch.zeros(batch_size, 100, device=device)
 
             # Set label threshold to be lower
-            network.fc_2.threshold_targets = utils.supervisory_threshold_modulation(10, labels)
+            network.layer_3.threshold_targets = utils.supervisory_threshold_modulation(10, labels)
 
             for step in range(num_steps):
+                inputs = inputs.view(batch_size, -1)
                 in_spikes = spikegen.rate(inputs, 1).squeeze(0)
 
                 # Forward pass through the network
@@ -218,7 +219,7 @@ def main():
             network.reset_hidden_state()
 
         # After training for one epoch, validate the model
-        network.fc_2.threshold_targets = torch.full((batch_size, 100), 1, dtype=torch.float, device=device)
+        network.layer_3.threshold_targets = torch.full((batch_size, 100), 1, dtype=torch.float, device=device)
         val_accuracy = validate(network, batch_size, num_steps, mnist_test_loader)
         # print(f"Validation Accuracy after epoch {epoch + 1}: {val_accuracy:.2f}%")
 

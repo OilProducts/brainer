@@ -1,8 +1,12 @@
 import torch
 
 
-#@torch.compile
-def LIFNeuron(input_spikes: torch.Tensor, weights: torch.Tensor, membrane: torch.Tensor, beta: float, threshold: float,
+# @torch.compile
+def LIFNeuron(input_spikes: torch.Tensor,
+              weights: torch.Tensor,
+              membrane: torch.Tensor,
+              beta: float,
+              threshold: float,
               reset: float):
     """Leaky Integrate-and-Fire (LIF) Neuron model.
 
@@ -19,7 +23,7 @@ def LIFNeuron(input_spikes: torch.Tensor, weights: torch.Tensor, membrane: torch
     """
 
     # Compute weighted input spikes
-    weighted_input_spikes = torch.mm(input_spikes, weights)
+    weighted_input_spikes = torch.matmul(input_spikes, weights)
 
     # Compute new membrane potential by adding input and applying leak factor
     membrane = membrane * beta + weighted_input_spikes
@@ -32,7 +36,24 @@ def LIFNeuron(input_spikes: torch.Tensor, weights: torch.Tensor, membrane: torch
 
     return spike, membrane
 
-#@torch.compile
+
+def LIF_with_dynamic_threshold(input_spikes: torch.Tensor,
+                               weights: torch.Tensor,
+                               membrane: torch.Tensor,
+                               thresholds: torch.Tensor,
+                               beta: float,
+                               reset: float):
+    weighted_input_spikes = torch.matmul(input_spikes, weights)
+
+    membrane = membrane * beta + weighted_input_spikes
+
+    spike = (membrane > thresholds).float()
+
+    membrane = torch.where(spike.bool(), reset, membrane)
+    return spike, membrane
+
+
+# @torch.compile
 def LIF_with_threshold_decay(input_spikes: torch.Tensor,
                              weights: torch.Tensor,
                              membrane: torch.Tensor,
@@ -70,7 +91,8 @@ def LIF_with_threshold_decay(input_spikes: torch.Tensor,
 
     return spike, membrane, thresholds
 
-#@torch.compile
+
+# @torch.compile
 def LIF_with_threshold_decay_and_ALIC(input_spikes: torch.Tensor,
                                       weights: torch.Tensor,
                                       membrane: torch.Tensor,
