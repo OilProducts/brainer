@@ -20,7 +20,7 @@ mnist_training_loader, mnist_test_loader = (
                                 shuffle=True,
                                 num_workers=0))
 
-network = models.SimpleConvInhibit(batch_size=16, kernel=kernel)
+network = models.SimpleConvInhibit(batch_size=batch_size, kernel=kernel)
 
 for epoch in range(num_epochs):
     progress_bar = tqdm(iter(mnist_training_loader), total=len(mnist_training_loader),
@@ -35,7 +35,8 @@ for epoch in range(num_epochs):
         output_spike_accumulator = torch.zeros(batch_size, 100, device=device)
 
         for step in range(num_steps):
-            output_spike_accumulator += network(inputs, labels, train=True)
+            output = network(inputs, labels, train=True)
+            output_spike_accumulator += output
 
 
 
