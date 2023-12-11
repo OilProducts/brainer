@@ -31,11 +31,13 @@ if torch.cuda.is_available():
     # else:
     #     device = torch.device("cuda")
     #     print("GPU is available and being used")
+elif torch.backends.mps.is_available():
+    device = torch.device("mps")
+
 else:
     device = torch.device("cpu")
     print("GPU is not available, using CPU instead")
 
-device = torch.device("cuda")
 
 data_path = "~/robots/datasets/"
 transform = transforms.Compose(
