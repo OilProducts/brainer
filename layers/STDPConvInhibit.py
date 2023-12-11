@@ -35,7 +35,6 @@ class STDPConvInhibit(nn.Module):
             self.num_channels, self.kernel_size, self.kernel_size,
             self.num_channels, device=device) * (1 / (self.kernel_size * self.kernel_size)))
 
-
         # self.weights = torch.rand(self.in_dim[0], self.in_dim[1], device=device) * (1 / (
         #         self.in_dim[0] * self.in_dim[1]))
         self.membrane = torch.ones(self.in_dim[0], self.in_dim[1], device=device)
@@ -79,7 +78,8 @@ class STDPConvInhibit(nn.Module):
                     # Extract the corresponding region from input and apply weights
                     region = in_spikes[:, :, start_i:end_i, start_j:end_j]
                     weights = self.weights[i, j, :, :, :, k]
-                    output[:, k, i, j] = (region * weights).sum(dim=(1, 2, 3)) # + self.bias[i, j, k]
+                    output[:, k, i, j] = (region * weights).sum(
+                        dim=(1, 2, 3))  # + self.bias[i, j, k]
 
         return output
 
@@ -148,6 +148,7 @@ class LocallyConnectedLayer(nn.Module):
 
                     # Element-wise multiplication and sum
                     output[:, k, i, j] = (x[:, :, start_i:end_i, start_j:end_j] *
-                                          self.weights[i, j, :, :, :, k]).sum(dim=(1, 2, 3)) + self.bias[i, j, k]
+                                          self.weights[i, j, :, :, :, k]).sum(dim=(1, 2, 3)) + \
+                                         self.bias[i, j, k]
 
         return output

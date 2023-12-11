@@ -8,10 +8,10 @@ import models
 import utils
 
 num_epochs = 100
-num_steps = 1000
+num_steps = 100
 batch_size = 1
 shrink_factor = 1
-device = 'cpu'
+device = 'cuda'
 
 kernel = layers.create_gaussian_kernel(7, 1, sigma=1.4).unsqueeze(0).unsqueeze(0)
 mnist_training_loader, mnist_test_loader = (
@@ -19,12 +19,12 @@ mnist_training_loader, mnist_test_loader = (
                                 batch_size=batch_size,
                                 shuffle=True,
                                 num_workers=0))
+torch.no_grad()
 
-network = models.SimpleConvInhibit(batch_size=batch_size, kernel=kernel)
-
+network = models.SimpleConvInhibit(batch_size=batch_size, kernel=kernel, device=device)
 for epoch in range(num_epochs):
     progress_bar = tqdm(iter(mnist_training_loader), total=len(mnist_training_loader),
-                        unit_scale=batch_size)
+                        unit_scale=batch_size, position=0)
 
     for inputs, labels in progress_bar:
         # Move inputs and labels to GPU
@@ -34,11 +34,12 @@ for epoch in range(num_epochs):
         # Reset spike accumulators
         output_spike_accumulator = torch.zeros(batch_size, 100, device=device)
 
-        for step in range(num_steps):
+        step_progress_bar = tqdm(range(num_steps), total=num_steps, position=1)
+        for step in step_progress_bar:
             output = network(inputs, labels, train=True)
             output_spike_accumulator += output
-
-
+            step_progress_bar.set_description(f'Step: {step + 1}/{num_steps}, Epoch: {epoch + 1}'
+                                              f'/{num_epochs}')
 
         # Update progress bar description
         progress_bar.set_description(

@@ -13,18 +13,24 @@ torch.Tensor([[0.0526, 0.0714, 0.0909, 0.1000, 0.0909, 0.0714, 0.0526],
 
 
 class SimpleConvInhibit(nn.Module):
-    def __init__(self, batch_size, kernel):
+    def __init__(self, batch_size, kernel, device='cpu'):
         super(SimpleConvInhibit, self).__init__()
 
         self.kernel = kernel
         self.batch_size = batch_size
 
-        self.layer_1 = layers.STDPConvInhibit((28, 28), (24, 24), 1, self.batch_size, kernel)
-        self.layer_2 = layers.STDPConvInhibit((24, 24), (20, 20), 1, self.batch_size, kernel)
-        self.layer_3 = layers.STDPConvInhibit((20, 20), (16, 16), 1, self.batch_size, kernel)
-        self.layer_4 = layers.STDPConvInhibit((16, 16), (12, 12), 1, self.batch_size, kernel)
-        self.layer_5 = layers.STDPConvInhibit((12, 12), (10, 10), 1, self.batch_size, kernel)
-        self.layer_6 = layers.STDPConvInhibit((10, 10), (10, 10), 1, self.batch_size, kernel)
+        self.layer_1 = layers.STDPConvInhibit((28, 28), (24, 24), 1, self.batch_size, kernel,
+                                              device=device)
+        self.layer_2 = layers.STDPConvInhibit((24, 24), (20, 20), 1, self.batch_size, kernel,
+                                              device=device)
+        self.layer_3 = layers.STDPConvInhibit((20, 20), (16, 16), 1, self.batch_size, kernel,
+                                              device=device)
+        self.layer_4 = layers.STDPConvInhibit((16, 16), (12, 12), 1, self.batch_size, kernel,
+                                              device=device)
+        self.layer_5 = layers.STDPConvInhibit((12, 12), (10, 10), 1, self.batch_size, kernel,
+                                              device=device)
+        self.layer_6 = layers.STDPConvInhibit((10, 10), (10, 10), 1, self.batch_size, kernel,
+                                              device=device)
 
     def forward(self, x, labels, train=True):
         layer_1_out = self.layer_1(x, train=train)
