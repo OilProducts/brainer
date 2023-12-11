@@ -2,7 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-#TODO: Add a trace that increases with frequent activation but decays slower than the membrane,
+
+# TODO: Add a trace that increases with frequent activation but decays slower than the membrane,
 # use that as a long term potentiation trace, ust STDP for direction and short term magnitude
 class STDPConvInhibit(nn.Module):
     def __init__(self, in_dimensions,  # (x, y)
@@ -69,5 +70,41 @@ def create_gaussian_kernel(kernel_size, max_value, sigma):
 
     # Calculate the kernel values using a 2D Gaussian function
     kernel = max_value * torch.exp(-distances_squared / (2 * sigma ** 2))
-
     return kernel
+
+
+class LocallyConnectedLayer(nn.Module):
+    def __init__(self, input_channels, output_channels, output_size, kernel_size, stride):
+        super(LocallyConnectedLayer, self).__init__()
+        self.input_channels = input_channels
+        self.output_channels = output_channels
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.output_size = output_size
+
+        # Define the weights for the locally connected layer
+        self.weights = nn.Parameter(torch.randn(
+            output_size[0], output_size[1],
+            input_channels, kernel_size, kernel_size,
+            output_channels
+        ))
+        self.bias = nn.Parameter(torch.randn(output_size[0], output_size[1], output_channels))
+
+    def forward(self, x):
+        # Initialize output tensor
+        output = torch.zeros(x.size(0), self.output_channels, *self.output_size).to(x.device)
+
+        # Apply the locally connected operation
+        for i in range(self.output_size[0]):
+            for j in range(self.output_size[1]):
+                for k in range(self.output_channels):
+                    start_i = i * self.stride
+                    start_j = j * self.stride
+                    end_i = start_i + self.kernel_size
+                    end_j = start_j + self.kernel_size
+
+                    # Element-wise multiplication and sum
+                    output[:, k, i, j] = (x[:, :, start_i:end_i, start_j:end_j] *
+                                          self.weights[i, j, :, :, :, k]).sum(dim=(1, 2, 3)) + self.bias[i, j, k]
+
+        return output
