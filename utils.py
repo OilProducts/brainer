@@ -68,8 +68,8 @@ def get_mnist_dataloaders(shrink_factor=1, batch_size=64, shuffle=True, num_work
 def supervisory_threshold_modulation(num_categories,
                                      labels,
                                      neurons_per_label=10,
-                                     threshold_default=1,
-                                     threshold_modulated=0.7):
+                                     threshold_default=1.,
+                                     threshold_modulated=.8):
     """
     Modifies the thresholds of the output neurons based on the labels.
     Args:

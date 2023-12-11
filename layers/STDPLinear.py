@@ -17,8 +17,8 @@ class STDPLinear(nn.Module):
     - reset (float): Reset value for the membrane potential after spike generation.
     - a_pos (float): STDP parameter for potentiation.
     - a_neg (float): STDP parameter for depression.
-    - trace_decay (float): Decay factor for the STDP traces. This quantity tracks the time difference between pre- and
-                           post-synaptic spikes.
+    - trace_decay (float): Decay factor for the STDP traces. This quantity tracks the time
+        difference between pre- and post-synaptic spikes.
     """
 
     def __init__(self, in_features, out_features,
@@ -28,7 +28,7 @@ class STDPLinear(nn.Module):
                  membrane_reset=.1,
                  membrane_decay=.99,
                  a_pos=0.005, a_neg=0.005,
-                 trace_decay=.95,
+                 trace_decay=.6,
                  plasticity_reward=1,
                  plasticity_punish=1,
                  device='cpu'):
@@ -69,23 +69,21 @@ class STDPLinear(nn.Module):
 
         self.device = device
 
-    #@torch.compile
+    # @torch.compile
     def forward(self, in_spikes, train=True):
         """Forward pass of the STDP Linear layer."""
 
         # Simulate the LIF neurons
-        self.out_spikes, self.membrane, self.thresholds = (
-            neurons.LIF_with_threshold_decay_and_ALIC(in_spikes,
-                                             self.weights,
-                                             self.membrane,
-                                             self.membrane_decay,
-                                             self.thresholds,
-                                             self.threshold_targets,
-                                             self.threshold_decay,
-                                             self.membrane_reset))
-
-        # print(f'num in_spikes: {in_spikes.sum()}')
-        # print(f'num out_spikes: {self.out_spikes.sum()}')
+        self.out_spikes, self.membrane = (
+            neurons.LIFNeuron(in_spikes,
+                               self.weights,
+                               self.membrane,
+                               self.membrane_decay,
+                               self.thresholds,
+                               self.membrane_reset))
+                               # self.threshold_targets,
+                               # self.threshold_decay,
+                               # self.membrane_reset))
 
         if train:
             # Update traces
@@ -97,11 +95,8 @@ class STDPLinear(nn.Module):
 
             # Compute STDP weight changes using traces
             weight_changes = self.compute_stdp_with_trace(self.trace_pre, self.trace_post)
-            # print(f'in_spikes: {in_spikes.sum()}')
-            #print(f'Weight changes: {weight_changes.abs().sum()/(self.in_features*self.out_features)}')
             # Save the last weight change for potential reward/punishment adjustments
             self.last_weight_change = weight_changes  # .clone()
-
             # Apply the STDP-induced weight changes
             avg_weight_changes = weight_changes.sum(dim=0)  # .t()
             self.weights += avg_weight_changes
@@ -110,7 +105,7 @@ class STDPLinear(nn.Module):
 
         return self.out_spikes
 
-    #@torch.compile
+    # @torch.compile
     def compute_stdp_with_trace(self, trace_pre, trace_post):
         # This is a simplified STDP rule using traces, adjust as needed
         potentiation = trace_post.unsqueeze(1) * self.a_pos * trace_pre.unsqueeze(2)
@@ -132,5 +127,3 @@ class STDPLinear(nn.Module):
 
         avg_last_weight_change = self.last_weight_change.sum(dim=0)
         self.weights += avg_last_weight_change * (factor - 1)
-
-

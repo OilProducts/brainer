@@ -113,11 +113,13 @@ def validate(network, batch_size, num_steps, test_loader):
 def main():
     # Training param
     num_epochs = 100
-    num_steps = 100
+    num_steps = 1000
     plasticity_reward = 1
     plasticity_punish = 1
     batch_size = 64
     shrink_factor = 1
+    a_pos = .1
+    a_neg = .1
 
     mnist_training_loader, mnist_test_loader = (
         utils.get_mnist_dataloaders(shrink_factor=shrink_factor,
@@ -126,15 +128,15 @@ def main():
                                     num_workers=0))
 
     # network = models.SimpleConv(batch_size=batch_size,
-    #                             a_pos=.00001,
-    #                             a_neg=.00001,
+    #                             a_pos=a_pos,
+    #                             a_neg=a_neg,
     #                             plasticity_reward=plasticity_reward,
     #                             plasticity_punish=plasticity_punish,
     #                             device=device)
 
     network = models.SimpleLinear(batch_size=batch_size,
-                                a_pos=.00005,
-                                a_neg=.00005,
+                                a_pos=a_pos,
+                                a_neg=a_neg,
                                 plasticity_reward=plasticity_reward,
                                 plasticity_punish=plasticity_punish,
                                 device=device)
@@ -156,13 +158,14 @@ def main():
             inputs = inputs.to(device)
             labels = labels.to(device)
             # Convert inputs to spike trains
-            inputs = inputs.view(batch_size, -1)  # This will reshape the tensor to [batch_size, 784]
+            # inputs = inputs.view(batch_size, -1)  # This will reshape the tensor to [batch_size, 784]
             output_spike_accumulator = torch.zeros(batch_size, 100, device=device)
 
             # Set label threshold to be lower
             network.layer_3.threshold_targets = utils.supervisory_threshold_modulation(10, labels)
 
             for step in range(num_steps):
+                inputs = inputs.view(batch_size, -1)
                 in_spikes = spikegen.rate(inputs, 1).squeeze(0)
 
                 # Forward pass through the network
@@ -176,8 +179,13 @@ def main():
             # Determine the predicted class based on the accumulated spikes
             # print(f'output_spike_accumulator: {output_spike_accumulator}')
             # _, predicted_classes = output_spike_accumulator.max(dim=1)
-            _, predicted_classes = pool_spikes(output_spike_accumulator).max(
-                dim=1)
+            pooled_spikes = pool_spikes(output_spike_accumulator)
+            if pooled_spikes.sum() > 0:
+                _, predicted_classes = pooled_spikes.max(dim=1)
+            else:
+                print('whoops')
+                predicted_classes = torch.zeros(batch_size, device=device, dtype=torch.long)
+
             #print(predicted_classes)
 
             correct_predictions = (predicted_classes == labels).float()
@@ -190,20 +198,23 @@ def main():
             label_strings = []
             for label in range(10):
                 accuracy_label = (correct_counts[label] / total_counts[label] * 100) if total_counts[label] > 0 else 0
-                label_string = f"{label}: {int(correct_counts[label])}/{int(total_counts[label])}"  # ({accuracy_label:.2f}%)"
+                label_string = f"{label}: {accuracy_label:.2f}%" #{int(correct_counts[label])}/{int(total_counts[label])}"  # ({accuracy_label:.2f}%)"
                 label_strings.append(label_string)
 
             num_correct += correct_predictions.sum().item()  # Summing over the batch
-            reward_factors = correct_predictions * plasticity_reward + (1 - correct_predictions) * plasticity_punish
-            for factor in reward_factors:
-                network.apply_reward(factor)
+            # reward_factors = correct_predictions * plasticity_reward + (1 - correct_predictions) * plasticity_punish
+            # for factor in reward_factors:
+            #     network.apply_reward(factor)
 
             # Update statistics
             samples_seen += batch_size
 
             # Update progress bar description
             accuracy = num_correct / samples_seen * 100
-            desc = f'Epoch: {epoch + 1}/{num_epochs} Accuracy: {accuracy:.2f}% ({num_correct}/{samples_seen}) Avg weight: {torch.mean(network.layer_3.weights)}' + ' '.join(
+            desc = (f'Epoch: {epoch + 1}/{num_epochs} '
+                    f'Accuracy: {accuracy:.2f}% ({num_correct}/{samples_seen}) '
+                    f'Avg weight: {torch.mean(network.layer_3.weights):.10f} '
+                    f'Avg threshold: {torch.mean(network.layer_3.thresholds):.10f} ') + ' '.join(
                 label_strings)
 
             progress_bar.set_description(desc)
