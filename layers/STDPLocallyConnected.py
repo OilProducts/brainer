@@ -67,13 +67,23 @@ class STDPLocallyConnected(nn.Module):
         self.trace_decay = trace_decay
         self.device = device
 
-        # Define the weights for the locally connected layer
+        # Define the weights for the locally connected layer,
+        # (x, y, in_channels, kernel_size, kernel_size, out_channels)
         self.weights = nn.Parameter(torch.randn(
             self.out_dim[0], self.out_dim[1],
             self.num_channels, self.kernel_size, self.kernel_size,
             self.num_channels, device=device) * (1 / (self.kernel_size * self.kernel_size)))
 
-        self.membrane = torch.ones(batch_size, num_channels, self.out_dim[0], self.out_dim[1], device=device)
+        # Initialize the membrane potentials, inhibition, and traces
+        self.trace_pre = torch.zeros(self.out_dim[0], self.out_dim[1], self.num_channels,
+                                     self.kernel_size, self.kernel_size, self.num_channels,
+                                     device=device)
+        self.trace_post = torch.zeros(self.out_dim[0], self.out_dim[1], self.num_channels,
+                                      self.kernel_size, self.kernel_size, self.num_channels,
+                                      device=device)
+
+        self.membrane = torch.ones(batch_size, num_channels, self.out_dim[0], self.out_dim[1],
+                                   device=device)
 
         # This is the inhibition vector that will be updated after every forward pass
         self.inhibition = torch.zeros(self.in_dim[0], self.in_dim[1], device=device)
@@ -82,13 +92,12 @@ class STDPLocallyConnected(nn.Module):
         self.trace_post = torch.ones(self.in_dim[0], self.in_dim[1], device=device)
 
         # padding needs to be sufficient to allow for inhibition kernel to be applied to all pixels
-        self.padding = (3, 3, 3, 3) # hard coded, this should be dynamic based on the size of the
+        self.padding = (3, 3, 3, 3)  # hard coded, this should be dynamic based on the size of the
         # locally connected area
-
 
         self.pad = nn.ReflectionPad2d(self.padding)
 
-    @torch.compile
+    # @torch.compile
     def forward(self, in_spikes: torch.Tensor, train=True):
         """
         The forward method for the STDPLocallyConnected class.
@@ -103,12 +112,16 @@ class STDPLocallyConnected(nn.Module):
 
         # Initialize output tensor
         batch_size = in_spikes.shape[0]
-        local_operation_result = torch.zeros(batch_size, self.num_channels, *self.out_dim).to(in_spikes.device)
+        local_operation_result = torch.zeros(batch_size, self.num_channels, *self.out_dim).to(
+            in_spikes.device)
         in_spikes = self.pad(in_spikes)
         # Apply the locally connected operation for each position
-        for i in range(self.out_dim[0]):
-            for j in range(self.out_dim[1]):
-                for k in range(self.num_channels):
+        for i in range(self.out_dim[0]):  # Iterate over X spatial dimension
+            for j in range(self.out_dim[1]):  # Iterate over Y spatial dimension
+                for k in range(self.num_channels):  # Iterate over output channels
+                    # Calculate the indices for the locally connected region, teh result is a 2D region described by
+                    # (start_i, start_j) and (end_i, end_j) representing the top left and bottom right corners of the
+                    # region respectively
                     start_i = i * self.stride
                     start_j = j * self.stride
                     end_i = start_i + self.kernel_size
@@ -120,8 +133,11 @@ class STDPLocallyConnected(nn.Module):
                     local_operation_result[:, k, i, j] = (region * weights).sum(
                         dim=(1, 2, 3))  # + self.bias[i, j, k]
 
+        # Calculate the new membrane potential
         self.membrane = self.membrane * self.membrane_decay + local_operation_result
+        # Determine which neurons spiked
         spike = (self.membrane > 1).float()
-        self.membrane = torch.where(spike.bool(), 1, self.membrane)
+        # Reset the membrane potential where neurons spiked
+        self.membrane = torch.where(spike.bool(), 0, self.membrane)
 
         return spike
