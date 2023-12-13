@@ -11,7 +11,14 @@ num_epochs = 100
 num_steps = 100
 batch_size = 64
 shrink_factor = 1
-device = 'cuda'
+
+# Determine what device to use
+if torch.cuda.is_available():
+    device = 'cuda'
+elif torch.backends.mps.is_available():
+    device = 'mps'
+else:
+    device = 'cpu'
 
 kernel = layers.create_gaussian_kernel(7, 1, sigma=1.4).unsqueeze(0).unsqueeze(0)
 mnist_training_loader, mnist_test_loader = (
